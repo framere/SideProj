@@ -106,19 +106,19 @@ def solve_schrodinger(m_eff, x_min, x_max, N, potential_func, potential_params, 
     return x_A, E_eV, PSI
 
 # plot numerical energy levels function
-def plot_numerical_energy_levels(x_A, potential_func, potential_params, E_eV, PSI, params_morse):
+def plot_numerical_energy_levels(x_A, potential_func, potential_params, E_eV, PSI):
     plt.figure(figsize=(6,4))
     V_eV = potential_func(x_A, *potential_params)
     plt.plot(x_A, V_eV, 'k', lw=1.5, label='V(x)')
 
     for n, energy in enumerate(E_eV):
-        min_index = np.where(morse_model(x_A, *params_morse) <= energy)[0][0]
-        max_index = np.where(morse_model(x_A, *params_morse) <= energy)[0][-1]
+        min_index = np.where(potential_func(x_A, *potential_params) <= energy)[0][0]
+        max_index = np.where(potential_func(x_A, *potential_params) <= energy)[0][-1]
         xi, xj = x_A[min_index], x_A[max_index]
         plt.hlines(energy, xi, xj, colors='r')
         # place level label centered above the line
         xmid = 0.5 * (xi + xj)
-        vp = morse_model(x_A, *params_morse)
+        vp = potential_func(x_A, *potential_params)
         y_offset = 0.01 * (vp.max() - vp.min())
         plt.text(xmid, energy + y_offset, f"n={n}", ha='center', va='bottom', color='r', fontsize=8)
         plt.plot(x_A, energy + 0.15*PSI[:,n]/np.max(np.abs(PSI[:,n])),

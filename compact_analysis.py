@@ -61,11 +61,22 @@ x_max = 0.15
 N = 2000     
 num_levels = 2  # number of energy levels to compute
 
+MODEL = 'quadratic'  # choose between 'quadratic', 'polynomial', and 'morse'
+if MODEL == 'quadratic':
+    potential_func = hf.quadratic_model
+    potential_params = params_quadratic
+elif MODEL == 'polynomial':
+    potential_func = hf.polynomial_model
+    potential_params = params_polynomial
+elif MODEL == 'morse':
+    potential_func = hf.morse_model
+    potential_params = params_morse
+
 # --- solve schrodinger ---
-x_A, E_numerical, PSI_numerical = hf.solve_schrodinger(m_eff, x_min, x_max, N, hf.morse_model, params_morse, num_levels, e, hbar)
+x_A, E_numerical, PSI_numerical = hf.solve_schrodinger(m_eff, x_min, x_max, N, potential_func, potential_params, num_levels, e, hbar)
 
 print("Numerical energy levels (in eV):")
 for n, energy in enumerate(E_numerical):
     print(f"n={n}: {energy:.4f} eV")
 # --- plot numerical energy levels ---
-hf.plot_numerical_energy_levels(x_A, hf.morse_model, params_morse, E_numerical, PSI_numerical, params_morse)
+hf.plot_numerical_energy_levels(x_A, potential_func, potential_params, E_numerical, PSI_numerical)
