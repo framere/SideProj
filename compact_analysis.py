@@ -47,10 +47,25 @@ for n in range(N_energy_levels):
     epsilon_n = (2 * lambda_param - n - 0.5) * (n + 0.5) * (hbar * a)**2 / (2 * m_eff)
     energy_levels.append(epsilon_n + offset)
 
-print("Calculated energy levels (in eV):")
+print("Analytical energy levels (in eV):")
 for i, energy in enumerate(energy_levels):
     print(f"n={i}: {energy / e:.4f} eV")
 
 x_vals = np.linspace(-0.14, 0.23, 1000)
 hf.plot_energy_levels(params_morse, energy_levels, x_vals, e)
 
+# ============================ Numerical calculations =============================
+# --- build grid ----
+x_min = -0.1
+x_max = 0.15
+N = 2000     
+num_levels = 2  # number of energy levels to compute
+
+# --- solve schrodinger ---
+x_A, E_numerical, PSI_numerical = hf.solve_schrodinger(m_eff, x_min, x_max, N, hf.morse_model, params_morse, num_levels, e, hbar)
+
+print("Numerical energy levels (in eV):")
+for n, energy in enumerate(E_numerical):
+    print(f"n={n}: {energy:.4f} eV")
+# --- plot numerical energy levels ---
+hf.plot_numerical_energy_levels(x_A, hf.morse_model, params_morse, E_numerical, PSI_numerical, params_morse)

@@ -3,6 +3,7 @@ import scipy.constants as const
 from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
 import seaborn as sns
+from scipy.linalg import eigh
 
 colors = sns.color_palette("tab10")
 folder = 'figures/'
@@ -41,11 +42,12 @@ def plot_fits(x_data, E_shifted, params_quadratic, params_polynomial, params_mor
     plt.grid()
     sns.despine()
     plt.savefig(f'{folder}potential_fits.pdf', bbox_inches='tight')
-    plt.show()
+    plt.close()
 
 # ============================= Analytical solution Morse =============================
 # plot energy levels function
 def plot_energy_levels(params_morse, energy_levels, x_vals, e):
+    plt.figure(figsize=(6, 4))
     plt.plot(x_vals, morse_model(x_vals, *params_morse), label='Morse Fit', color=colors[2])
     for n, energy in enumerate(energy_levels):
         min_index = np.where(morse_model(x_vals, *params_morse) <= energy / e)[0][0]
@@ -65,4 +67,68 @@ def plot_energy_levels(params_morse, energy_levels, x_vals, e):
     sns.despine()
     plt.grid()
     plt.savefig(f'{folder}morse_energy_levels.pdf', bbox_inches='tight')
-    plt.show()
+    plt.close()
+
+
+# ============================ Numerical solution ============================
+def solve_schrodinger(m_eff, x_min, x_max, N, potential_func, potential_params, num_levels, e, hbar):
+    # Build grid
+    x_A = np.linspace(x_min, x_max, N)
+    x = x_A * 1e-10  # Convert Angstrom to meters
+    dx = x[1] - x[0]
+
+    # Construct potential energy array
+    V_ev = potential_func(x_A, *potential_params)
+    V = V_ev * e  # Convert eV to Joules
+
+    # enforce high walls to help localization
+    V[0]  = V[-1] = np.max(V)*2
+
+    # Construct Hamiltonian matrix using finite difference method
+    # --- kinetic (finite-diff) ---
+    coeff = hbar**2 / (2.0 * m_eff * dx**2)
+    diag  = 2*coeff + V
+    off   = -coeff * np.ones(N-1)
+
+    # Dirichlet boundary conditions 
+    H = np.diag(diag) + np.diag(off,1) + np.diag(off,-1)
+
+
+    # Solve eigenvalue problem
+    E_J, PSI = eigh(H, eigvals=(0,num_levels-1))
+    E_eV = E_J / e
+
+    # normalize wavefunctions
+    for n in range(num_levels):
+        norm = np.sqrt(np.sum(np.abs(PSI[:,n])**2)*dx)
+        PSI[:,n] /= norm
+
+    return x_A, E_eV, PSI
+
+# plot numerical energy levels function
+def plot_numerical_energy_levels(x_A, potential_func, potential_params, E_eV, PSI, params_morse):
+    plt.figure(figsize=(6,4))
+    V_eV = potential_func(x_A, *potential_params)
+    plt.plot(x_A, V_eV, 'k', lw=1.5, label='V(x)')
+
+    for n, energy in enumerate(E_eV):
+        min_index = np.where(morse_model(x_A, *params_morse) <= energy)[0][0]
+        max_index = np.where(morse_model(x_A, *params_morse) <= energy)[0][-1]
+        xi, xj = x_A[min_index], x_A[max_index]
+        plt.hlines(energy, xi, xj, colors='r')
+        # place level label centered above the line
+        xmid = 0.5 * (xi + xj)
+        vp = morse_model(x_A, *params_morse)
+        y_offset = 0.01 * (vp.max() - vp.min())
+        plt.text(xmid, energy + y_offset, f"n={n}", ha='center', va='bottom', color='r', fontsize=8)
+        plt.plot(x_A, energy + 0.15*PSI[:,n]/np.max(np.abs(PSI[:,n])),
+                label=f'n={n}, E={energy:.4f} eV')
+
+    plt.xlabel('x (Å)')
+    plt.ylabel('Energy (eV)')
+    plt.legend()
+    plt.title('Bound states from finite difference')
+    plt.grid(True)
+    sns.despine()
+    plt.savefig(f'{folder}numerical_energy_levels.pdf', bbox_inches='tight')
+    plt.close()
