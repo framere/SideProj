@@ -1,5 +1,4 @@
 import numpy as np
-import scipy.constants as const
 from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -102,8 +101,19 @@ def plot_numerical_energy_levels(x_A, potential_func, potential_params, E_eV, PS
     plt.title('Bound states from finite difference')
     plt.grid(True)
     sns.despine()
-    plt.savefig(f'{folder}numerical_energy_levels_{model}.pdf', bbox_inches='tight')
+    plt.savefig(f'{folder}numerical_solution_{model}.pdf', bbox_inches='tight')
     plt.close()
+
+# ============================= Analytical solution Quadratic =============================
+def analytical_quadratic_energy_levels(params_quadratic, m_eff, hbar_ineV, e, N_energy_levels):
+    a, b, c = params_quadratic
+    b_J_m2 = b * e / (1e-10)**2
+    omega = np.sqrt(2 * b_J_m2 / m_eff)
+    energy_levels = []
+    for n in range(N_energy_levels):
+        energy = hbar_ineV * omega * (n + 0.5) + a
+        energy_levels.append(energy * e)  # convert to Joules
+    return energy_levels
 
 
 # ============================= Analytical solution Morse =============================
@@ -125,25 +135,26 @@ def analytical_morse_energy_levels(params_morse, m_eff, hbar, e, N_energy_levels
     return energy_levels
 
 # plot energy levels function
-def plot_energy_levels(params_morse, energy_levels, x_vals, e):
+def plot_energy_levels(model, params, energy_levels, x_min, x_max, e, name):
     plt.figure(figsize=(6, 4))
-    plt.plot(x_vals, morse_model(x_vals, *params_morse), label='Morse Fit', color=colors[2])
+    x_vals = np.linspace(x_min, x_max, 1000)
+    plt.plot(x_vals, model(x_vals, *params), label='Fit', color=colors[2])
     for n, energy in enumerate(energy_levels):
-        min_index = np.where(morse_model(x_vals, *params_morse) <= energy / e)[0][0]
-        max_index = np.where(morse_model(x_vals, *params_morse) <= energy / e)[0][-1]
+        min_index = np.where(model(x_vals, *params) <= energy / e)[0][0]
+        max_index = np.where(model(x_vals, *params) <= energy / e)[0][-1]
         xi, xj = x_vals[min_index], x_vals[max_index]
         plt.hlines(energy / e, xi, xj, colors='r', label='Energy levels' if n == 0 else "")
         # place level label centered above the line
         xmid = 0.5 * (xi + xj)
-        vp = morse_model(x_vals, *params_morse)
+        vp = model(x_vals, *params)
         y_offset = 0.01 * (vp.max() - vp.min())
         plt.text(xmid, energy / e + y_offset, f"n={n}", ha='center', va='bottom', color='r', fontsize=8)
         
     plt.xlabel('Position (Angstrom)')
     plt.ylabel('Energy (eV)')
-    plt.title('Bound states from analytical Morse solution')
+    plt.title(f'Bound states from analytical {name} solution')
     plt.legend()
     sns.despine()
     plt.grid()
-    plt.savefig(f'{folder}morse_energy_levels.pdf', bbox_inches='tight')
+    plt.savefig(f'{folder}analytical_solution_{name}.pdf', bbox_inches='tight')
     plt.close()

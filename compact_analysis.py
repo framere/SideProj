@@ -13,6 +13,7 @@ E_shifted = E_data - E_data.min()  # Shift energies so that minimum is at 0 eV
 mass_u = physical_constants['atomic mass constant'][0]  # Atomic mass unit in kg
 omega = 265.495409 *1e-3 * e / hbar  # Convert meV to J and then to angular frequency
 m_eff = 13.585135873543415 * mass_u  # Effective mass in kg
+hbar_eV = hbar / e  # Convert hbar from J.s to eV.s
 
 # ============================= Select model to fit =============================
 MODEL = 'Morse'  # choose between 'quadratic', 'polynomial', and 'morse'
@@ -48,21 +49,26 @@ x_A, E_numerical, PSI_numerical = hp.solve_schrodinger(m_eff, x_min, x_max, N, p
 
 print("Numerical energy levels (in eV):")
 for n, energy in enumerate(E_numerical):
-    print(f"n={n}: {energy:.4f} eV")
+    print(f"n={n}: {energy:.4f}  eV")
 # --- plot numerical energy levels ---
 hp.plot_numerical_energy_levels(x_A, potential_func, potential_params, E_numerical, PSI_numerical, MODEL)
 
 
 # ============================= Analytical solution Morse =============================
-if MODEL != 'Morse':
-    raise ValueError("Analytical Morse solution can only be computed if the Morse model is selected.")
+if MODEL == 'Morse':
+    # --- compute analytical energy levels ---
+    energy_levels = hp.analytical_morse_energy_levels(params_morse, m_eff, hbar, e, num_levels)
 
-# --- compute analytical energy levels ---
-energy_levels = hp.analytical_morse_energy_levels(params_morse, m_eff, hbar, e, num_levels)
+    print("Analytical energy levels (in eV):")
+    for i, energy in enumerate(energy_levels):
+        print(f"n={i}: {energy / e:.4f} eV")
 
-print("Analytical energy levels (in eV):")
-for i, energy in enumerate(energy_levels):
-    print(f"n={i}: {energy / e:.4f} eV")
+    hp.plot_energy_levels(potential_func, potential_params, energy_levels, x_min, x_max, e, "Morse")
+elif MODEL == 'Quadratic':
+    # --- compute analytical energy levels ---
+    energy_levels_quad = hp.analytical_quadratic_energy_levels(params_quadratic, m_eff, hbar_eV, e, num_levels)
+    print("Analytical Quadratic energy levels (in eV):")
+    for i, energy in enumerate(energy_levels_quad):
+        print(f"n={i}: {energy / e:.4f} eV")
 
-x_vals = np.linspace(x_min, x_max, 1000)
-hp.plot_energy_levels(params_morse, energy_levels, x_vals, e)
+    hp.plot_energy_levels(potential_func, potential_params, energy_levels_quad, x_min, x_max, e, "Quadratic")
